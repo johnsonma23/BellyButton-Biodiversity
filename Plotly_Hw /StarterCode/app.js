@@ -1,58 +1,130 @@
-//Define function for metadata panel containing demographic info
-//Read in json file
-function buildMetadata(sample) {
-    d3.json("samples.json").then(function(data) {
-        console.log(data);
-        // Grabs the id tag for the demographic's panel 
-        var dePanel = d3.select("#sample-metadata");
-        // Clears the demographic's panel 
-        dePanel.html("");
-        // Create the path to metadata
-        var metadata= data.metadata
-        console.log(metadata)
-        // Use a forEach to grab each key & values in the array
-    Object.entries(data.metadata[0]).forEach(([key, value]) => {
-        console.log(`${key} : ${value}`)
-        //dePanel.append("p").text(`${key} : ${value}`);
-    });
-    });
-}
-
-function buildCharts (sample) {
+function buildCharts (id) {
     var hozChart = "samples.json";
     d3.json(hozChart).then(function(data){
         console.log(data)
-        const sampleValues = data.samples.map( s => s.sample_values.slice(0,10));
+        //var Samples = data.samples.filter(s => s.id.toString() === id)[0];
+        var Samples = data.samples.filter(s => s.id == id)[0];
+        console.log(Samples)
+        var sampleValues = (Samples.sample_values.slice(0,10)).reverse()
         console.log(sampleValues)
-        const otuIDs = data.samples.map( o => o.otu_ids.slice(0,10));
-        const otuLabels = data.samples.map(otu => otu.otu_labels.slice(0,10));
-    
-    //Slice the top 10 sample values for each individual for bar chart
-    
-    //var dataSlice = sampleValues.sort((a,b) => b - a);
-    //var slicedData = sampleValues.slice(0, 10);
-    //var dataOtu = sample.sort((a,b) => b.otu_ids - a.otu_ids);
-    //var slicedOtuID = otuIDs.slice(0, 10);
-    // var Trace1 = [{
-    //     x: slicedData.map(object => object.sampleValues),
-    //     y: slicedOtuID.map(object => object.otuIDs),
-    //     hoverovertext: otuLabels,
-    //     orientation: "h",
-    //     type: "bar"
-    // }]
+        var otuIDs = (Samples.otu_ids.slice(0,10)).reverse()
+        console.log(otuIDs)
+        var Otu_IDs= otuIDs.map(id => "UTO" + id)
+        var otuLabels = (Samples.otu_labels.slice(0,10)).reverse();
+    // var Samples= data.sample.map( m => m.sample_values[0])
+        var Gauge=data.metadata.filter(g => g.id == id)[0];
+        console.log(Gauge)
+        var wfreq= Gauge.wfreq;
+            console.log(wfreq)
+        
 
-    var hozBar= [{
+    var hozBar= {
         x: sampleValues,
-        y: otuIDs,
-        hoverovertext: otuLabels,
+        y: Otu_IDs,
+        text: otuLabels,
         orientation: "h",
         type: "bar"
-    }];
+    };
 
-    Plotly.newPlot("bar", hozBar);
+    var hozLayout={
+        title: 'Bacteria',
+        xAxis: "Amount of Bacteria"
+
+    }
+    var barData= [hozBar]
+
+    Plotly.newPlot("bar", barData, hozLayout);
+  
+
+
+
+
+
+    var Trace2 = {
+        x: Samples.otu_ids,
+        y: Samples.sample_values,
+        text: Samples.otu_labels,
+        mode: 'markers',
+        marker:{
+            size: Samples.sample_values,
+            color: Samples.otu_ids,
+            //opacity: Samples.otu_ids
+        },
+        text: Samples.otu_labels,
+    };
+    var bubble=[Trace2];
+  
+    Plotly.newPlot("bubble", bubble)
+
+
+    var dataGauge = [
+        {
+        domain: { x: [0, 1], y: [0, 1] },
+        value: wfreq,
+        title: { text: `Weekly Washing Frequency ` },
+        type: "indicator",
+        mode: "gauge+number",
+        gauge: { axis: { range: [null, 9] },
+                 steps: [
+                  { range: [0, 1], color: "AliceBlue" },
+                  { range: [1, 2], color: "LightYellow" },
+                  { range: [2, 3], color: "LemonChiffon" },
+                  { range: [3, 4], color: "PaleTurquoise" },
+                  { range: [4, 5], color: "PowderBlue" },
+                  { range: [5, 6], color: "SkyBlue" },
+                  { range: [6, 7], color: "MediumTurquoise" },
+                  { range: [7, 8], color: "RoyalBlue" },
+                  { range: [8, 9], color: "Navy" }
+                ]}
+            
+        }
+      ];
+      var layoutGauge = { 
+          width: 600, 
+          height: 400, 
+          margin: { t: 10, b: 40, l:100, r:100 } 
+        };
+      Plotly.newPlot("gauge", dataGauge, layoutGauge);
+
+
+});
+}
+
+function getMetadata (id) {
+    d3.json("samples.json").then(function(data) {
+        console.log(data);
+        // Create the path to metadata
+        var metadata= data.metadata
+        console.log(metadata)
+        //Grabing the first line of code in samples 
+        var metaResults= metadata.filter(m => m.id == id)[0];
+         // Grabs the id tag for the demographic's panel 
+         var dePanel = d3.select("#sample-metadata");
+         // Clears the demographic's panel 
+         dePanel.html("");
+        // Use a forEach to grab each key & values in the array
+    // Object.entries(metaResults).forEach((value) => {
+    //     console.log(value)
+    //     dePanel.append("p").text(value[0].toUpperCase() + ": " + value[1] + "\n"); 
+    // });
+    Object.entries(metaResults).forEach(([key, value]) => {
+        console.log(value)
+        dePanel.append("p").text(`${key} : ${value}`);
+    });
     });
 }
 
+
+
+
+
+
+
+// create the change event
+function optionChanged(id) {
+    buildCharts(id);
+    getMetadata(id);
+}
 
 
 
@@ -76,31 +148,13 @@ function init(){
     });
 
     // Use the first sample from the list to build the initial plots
-  const firstSample = data.samples[0];
-  console.log(firstSample)
-  buildCharts(firstSample);
-  buildMetadata(firstSample);
+  buildCharts(data.names[0]);
+  getMetadata(data.names[0]);
 });
 
 
-function optionChanged(newSample) {
-// Fetch new data each time a new sample is selected
-buildCharts(newSample);
-buildMetadata(newSample)
-
-
-
-    // filiter sample by the corrlating id tags
-    // var filter_sample_values= data.samples.filter(value => value.id.toString() === id[0]);
-
-    // console.log(filter_sample_values)
-    // // find sample values form the filter data
-    // var sample_values= filter_sample_values.
-    // var otu_ids= data.samples.map(o_ids => o_ids.otu_ids);
-
-
-    }
 }
+
 init();
 
 
